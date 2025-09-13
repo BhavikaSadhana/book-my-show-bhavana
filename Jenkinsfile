@@ -8,6 +8,8 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
+        DOCKER_IMAGE = 'bhavana686/bookmyshow:v1'
+        K8S_NAMESPACE = 'bhavana'
     }
 
     stages {
@@ -80,32 +82,27 @@ pipeline {
                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
                         sh ''' 
                             echo "Building Docker image..."
-                            docker build --no-cache -t bhavana686/bookmyshow:v1 -f bookmyshow-app/Dockerfile bookmyshow-app
+                            docker build --no-cache -t $DOCKER_IMAGE -f bookmyshow-app/Dockerfile bookmyshow-app
 
                             echo "Pushing Docker image to registry..."
-                            docker push bhavana686/bookmyshow:v1
+                            docker push $DOCKER_IMAGE
                         '''
                     }
                 }
             }
         }
 
-        stage('Deploy to Container') {
+        stage('Deploy to Kubernetes') {
             steps {
-                sh ''' 
-                    echo "Stopping and removing old container..."
-                    docker stop bms || true
-                    docker rm bms || true
+                sh '''
+                    echo "Deploying to Kubernetes namespace: ${K8S_NAMESPACE}"
 
-                    echo "Running new container on port 3000..."
-                    docker run -d --restart=always --name bms -p 3000:3000 bhavana686/bookmyshow:v1
+                    kubectl apply -f k8-manifest/deployment.yaml -n ${K8S_NAMESPACE}
+                    kubectl apply -f k8-manifest/service.yaml -n ${K8S_NAMESPACE}
 
-                    echo "Checking running containers..."
-                    docker ps -a
-
-                    echo "Fetching logs..."
-                    sleep 5  # Give time for the app to start
-                    docker logs bms
+                    echo "Verifying deployment..."
+                    kubectl get pods -n ${K8S_NAMESPACE}
+                    kubectl get svc -n ${K8S_NAMESPACE}
                 '''
             }
         }
@@ -120,7 +117,7 @@ pipeline {
                       "Build Number: ${env.BUILD_NUMBER}<br/>" +
                       "URL: ${env.BUILD_URL}<br/>",
                 to: 'bhavanasadhana02@gmail.com',
-                attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+                attachmentsPattern: 'trivyfs.txt'
             )
         }
     }
