@@ -97,8 +97,8 @@ pipeline {
                 sh '''
                     echo "Deploying to Kubernetes namespace: ${K8S_NAMESPACE}"
 
-                    kubectl apply -f k8-manifest/deployment.yaml -n ${K8S_NAMESPACE}
-                    kubectl apply -f k8-manifest/service.yaml -n ${K8S_NAMESPACE}
+                    kubectl apply -f k8-manifest/deployment.yaml
+                    kubectl apply -f k8-manifest/service.yaml
 
                     echo "Verifying deployment..."
                     kubectl get pods -n ${K8S_NAMESPACE}
