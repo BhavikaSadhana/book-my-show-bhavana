@@ -21,7 +21,7 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'feature', url: 'https://github.com/shivangi099/Book-My-Show-app.git'
+                git branch: 'feature', url: 'https://github.com/BhavikaSadhana/book-my-show-bhavana.git'
                 sh 'ls -la'  // Verify files after checkout
             }
         }
