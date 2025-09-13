@@ -1,9 +1,13 @@
 pipeline {
     agent any
 
+    tools {
+        jdk 'jdk17'
+        nodejs 'node24'
+    }
+
     environment {
-        REGISTRY = "bhavana686/bookmyshow"
-        SONARQUBE = "SonarQube"
+        SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
@@ -13,50 +17,111 @@ pipeline {
             }
         }
 
-        stage('Checkout Code') {
+        stage('Checkout from Git') {
             steps {
-                git branch: 'feature', url: 'https://github.com/BhavikaSadhana/book-my-show-bhavana.git'
+                git branch: 'feature', url: 'https://github.com/shivangi099/Book-My-Show-app.git'
+                sh 'ls -la'  // Verify files after checkout
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh 'mvn clean verify sonar:sonar'
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' 
+                        $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectName=BMS \
+                            -Dsonar.projectKey=BMS
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
                 }
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
-            }
-        }
-
-
-        stage('Docker Build & Push') {
-            steps {
                 sh '''
-                docker build -t $REGISTRY:v1 .
-                docker push $REGISTRY:v1
+                    cd bookmyshow-app
+                    ls -la  # Verify package.json exists
+                    if [ -f package.json ]; then
+                        rm -rf node_modules package-lock.json  # Remove old dependencies
+                        npm install  # Install fresh dependencies
+                    else
+                        echo "Error: package.json not found in bookmyshow-app!"
+                        exit 1
+                    fi
                 '''
             }
         }
 
-        stage('Deploy to K8s') {
+        stage('OWASP FS Scan') {
             steps {
-                sh 'kubectl apply -f k8-manifest/deployment.yaml'
-                sh 'kubectl apply -f k8-manifest/service.yaml'
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
+                                odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
 
-        stage('Notify') {
+        stage('Trivy FS Scan') {
             steps {
-                mail to: 'bhavanasadhana990@gmail.com',
-                     subject: "Build #${REGISTRY}",
-                     body: "Check Jenkins for details."
+                sh 'trivy fs . > trivyfs.txt'
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh ''' 
+                            echo "Building Docker image..."
+                            docker build --no-cache -t bhavana686/bookmyshow:v1 -f bookmyshow-app/Dockerfile bookmyshow-app
+
+                            echo "Pushing Docker image to registry..."
+                            docker push bhavana686/bookmyshow:v1
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Container') {
+            steps {
+                sh ''' 
+                    echo "Stopping and removing old container..."
+                    docker stop bms || true
+                    docker rm bms || true
+
+                    echo "Running new container on port 3000..."
+                    docker run -d --restart=always --name bms -p 3000:3000 bhavana686/bookmyshow:v1
+
+                    echo "Checking running containers..."
+                    docker ps -a
+
+                    echo "Fetching logs..."
+                    sleep 5  # Give time for the app to start
+                    docker logs bms
+                '''
             }
         }
     }
-}
 
+    post {
+        always {
+            emailext(
+                attachLog: true,
+                subject: "'${currentBuild.result}'",
+                body: "Project: ${env.JOB_NAME}<br/>" +
+                      "Build Number: ${env.BUILD_NUMBER}<br/>" +
+                      "URL: ${env.BUILD_URL}<br/>",
+                to: 'bhavanasadhana02@gmail.com',
+                attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+            )
+        }
+    }
+}
