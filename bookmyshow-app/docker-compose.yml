@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   bookmyshow:
-    image: bhavana686/bookmyshow:v1
+    image: bhavana686/bookmyshow:v4
     container_name: bookmyshow
     ports:
       - "3000:3000"
