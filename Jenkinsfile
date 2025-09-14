@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         jdk 'jdk17'
-        nodejs 'node24'
+        node 'node24'
     }
 
     environment {
@@ -21,7 +21,7 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'feature', url: 'https://github.com/shivangi099/Book-My-Show-app.git'
+                git branch: 'feature', url: 'https://github.com/BhavikaSadhana/book-my-show-bhavana.git'
                 sh 'ls -la'  // Verify files after checkout
             }
         }
@@ -31,7 +31,7 @@ pipeline {
                 withSonarQubeEnv('sonar-server') {
                     sh ''' 
                         $SCANNER_HOME/bin/sonar-scanner \
-                            -Dsonar.projectName=BMS \
+                            -Dsonar.projectName=BookMyShow \
                             -Dsonar.projectKey=BMS
                     '''
                 }
@@ -97,8 +97,8 @@ pipeline {
                 sh '''
                     echo "Deploying to Kubernetes namespace: ${K8S_NAMESPACE}"
 
-                    kubectl apply -f k8-manifest/deployment.yaml -n ${K8S_NAMESPACE}
-                    kubectl apply -f k8-manifest/service.yaml -n ${K8S_NAMESPACE}
+                    kubectl apply -f k8-manifest/deployment.yaml
+                    kubectl apply -f k8-manifest/service.yaml
 
                     echo "Verifying deployment..."
                     kubectl get pods -n ${K8S_NAMESPACE}
@@ -116,7 +116,7 @@ pipeline {
                 body: "Project: ${env.JOB_NAME}<br/>" +
                       "Build Number: ${env.BUILD_NUMBER}<br/>" +
                       "URL: ${env.BUILD_URL}<br/>",
-                to: 'bhavanasadhana02@gmail.com',
+                to: 'bhavanasadhana01@gmail.com',
                 attachmentsPattern: 'trivyfs.txt'
             )
         }
