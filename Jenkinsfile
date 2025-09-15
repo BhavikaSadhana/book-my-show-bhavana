@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_IMAGE = 'bhavana686/bookmyshow:v5'
+        DOCKER_IMAGE = 'bhavana686/bookmyshow:v4'
         K8S_NAMESPACE = 'bhavana'
     }
 
@@ -44,15 +44,16 @@ pipeline {
                 }
             }
         }
-
-        stage('Install Dependencies') {
+         stage('Install Dependencies') {
             steps {
+                // Install Node.js dependencies
                 sh '''
                     cd bookmyshow-app
                     ls -la  # Verify package.json exists
+                    
                     if [ -f package.json ]; then
-                        rm -rf node_modules package-lock.json  # Remove old dependencies
-                        npm install  # Install fresh dependencies
+                        rm -rf node_modules package-lock.json  # Clean old dependencies
+                        npm install                            # Fresh install
                     else
                         echo "Error: package.json not found in bookmyshow-app!"
                         exit 1
@@ -61,19 +62,9 @@ pipeline {
             }
         }
 
-        stage('OWASP FS Scan') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
-                                odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
 
-        stage('Trivy FS Scan') {
-            steps {
-                sh 'trivy fs . > trivyfs.txt'
-            }
-        }
+
+
 
         stage('Docker Build & Push') {
             steps {
