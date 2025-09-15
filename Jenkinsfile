@@ -3,12 +3,11 @@ pipeline {
 
     tools {
         jdk 'jdk17'
-        node 'node24'
     }
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_IMAGE = 'bhavana686/bookmyshow:v4'
+        DOCKER_IMAGE = 'bhavana686/bookmyshow:v5'
         K8S_NAMESPACE = 'bhavana'
     }
 
