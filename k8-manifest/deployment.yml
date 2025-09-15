@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: bookmyshow
-        image: bhavana686/bookmyshow:v4
+        image: bhavana686/bookmyshow:v5
         ports:
         - containerPort: 3000
