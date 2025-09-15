@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_IMAGE = 'bhavana686/bookmyshow:v5'
+        DOCKER_IMAGE = 'bhavana686/bookmyshow:v4'
         K8S_NAMESPACE = 'bhavana'
     }
 
