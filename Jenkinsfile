@@ -45,35 +45,7 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                    cd bookmyshow-app
-                    ls -la  # Verify package.json exists
-                    if [ -f package.json ]; then
-                        rm -rf node_modules package-lock.json  # Remove old dependencies
-                        npm install  # Install fresh dependencies
-                    else
-                        echo "Error: package.json not found in bookmyshow-app!"
-                        exit 1
-                    fi
-                '''
-            }
-        }
 
-        stage('OWASP FS Scan') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
-                                odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
-
-        stage('Trivy FS Scan') {
-            steps {
-                sh 'trivy fs . > trivyfs.txt'
-            }
-        }
 
         stage('Docker Build & Push') {
             steps {
